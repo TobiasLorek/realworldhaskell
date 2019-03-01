@@ -1,19 +1,58 @@
 import Data.List
 
 data Tree a = Node (Tree a) (Tree a)
-            | Leaf a
+            | Leaf a 
+            deriving Show
 
-data Point2 = Point2 Double Double
+data P2 = P2 Double Double deriving Show
 
-cross :: Point2 -> Point2 -> Double
-cross (Point2 x1 y1) (Point2 x2 y2) = x1 * x2 + y1 * y2
+data Direction = LeftTurn | RightTurn | Straight deriving Show
 
-sub :: Point2 -> Point2 -> Point2
-sub (Point2 x1 y1) (Point2 x2 y2) = Point2 (x1 - x2) (y1 - y2)
+dirToOrder :: Direction -> Ordering
+dirToOrder dir = case dir of
+    LeftTurn  -> LT
+    Straight  -> EQ
+    RightTurn -> GT
 
-data Direction = Left | Right | Straight
+turn :: P2 -> P2 -> P2 -> Direction
+turn p1 p2 p3
+    | z == 0 = Straight
+    | z <  0 = RightTurn
+    | z >  0 = LeftTurn
+    where zdir (P2 x1 y1) (P2 x2 y2) (P2 x3 y3) 
+            = (x2 - x1) * (y3 - y2) - (y2 - y1) * (x3 - x2)
+          z = zdir p1 p2 p3
 
-turn :: Point2 -> Point2 -> Point2 -> Direction
+
+turns :: [P2] -> [Direction]
+turns (x:y:z:ps) = (turn x y z):(turns $ y:z:ps)
+turns ps = []
+
+compPoints :: P2 -> P2 -> P2 -> Ordering
+compPoints origin p1 p2 = dirToOrder $ (turn origin p1 p2)
+
+grahamScan :: [P2] -> [P2]
+grahamScan [] = []
+grahamScan [p] = [p]
+grahamScan [p1, p2] = [p1, p2]
+grahamScan [p1, p2, p3] = [p1, p2, p3]
+grahamScan (p:ps) = foldl (\x y -> reduce (y:x)) [start] (tail sortedPoints)
+    where reduce (pn2:pn1:pn:ps) = case turn pn pn1 pn2 of
+            RightTurn -> reduce (pn2:pn:ps)
+            _         -> (pn2:pn1:pn:ps)
+          reduce ps = ps
+          start = minimumBy p2min ps
+            where p2min (P2 x1 y1) (P2 x2 y2) | x1 < x2              = LT
+                                              | x1 == x2 && y1 < y2  = LT
+                                              | x1 == x2 && y1 == y2 = EQ
+                                              | otherwise            = GT
+          sortedPoints = sortBy (compPoints start) ps
+grahamScan ps = ps
+            
+
+
+
+
 height :: Tree a -> Int
 height (Leaf a) = 0
 height (Node t1 t2) = 1 + max (height t1) (height t2)
@@ -35,7 +74,7 @@ toPalindrom :: [a] -> [a]
 toPalindrom xs = xs ++ reverse xs
 
 isPalindrom :: Eq a => [a] -> Bool
-isPalindrom xs = and (foldl (\x y -> x == y) True zip xs (reverse xs))
+isPalindrom xs = and $ map (\(x, y) -> x == y) $ zip xs (reverse xs)
 
 
 sortList :: [[a]] -> [[a]]
