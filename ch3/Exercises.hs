@@ -4,7 +4,7 @@ data Tree a = Node (Tree a) (Tree a)
             | Leaf a 
             deriving Show
 
-data P2 = P2 Double Double deriving Show
+data P2 = P2 Double Double deriving (Show, Eq)
 
 data Direction = LeftTurn | RightTurn | Straight deriving Show
 
@@ -25,33 +25,33 @@ turn p1 p2 p3
 
 
 turns :: [P2] -> [Direction]
-turns (x:y:z:ps) = (turn x y z):(turns $ y:z:ps)
+turns (x:y:z:ps) = turn x y z : turns (y:z:ps)
 turns ps = []
 
+p2min :: P2 -> P2 -> Ordering
+p2min (P2 x1 y1) (P2 x2 y2) | x1 < x2              = LT
+                            | x1 == x2 && y1 < y2  = LT
+                            | x1 == x2 && y1 == y2 = EQ
+                            | otherwise            = GT
+
+points = [P2 0 0, P2 1 0, P2 0.5 0.5, P2 0 1]
+
 compPoints :: P2 -> P2 -> P2 -> Ordering
-compPoints origin p1 p2 = dirToOrder $ (turn origin p1 p2)
+compPoints origin p1 p2 = dirToOrder (turn origin p1 p2)
 
 grahamScan :: [P2] -> [P2]
 grahamScan [] = []
 grahamScan [p] = [p]
 grahamScan [p1, p2] = [p1, p2]
 grahamScan [p1, p2, p3] = [p1, p2, p3]
-grahamScan (p:ps) = foldl (\x y -> reduce (y:x)) [start] (tail sortedPoints)
+grahamScan (p:ps) = foldl (\x y -> reduce (y:x)) [start] sortedPoints
     where reduce (pn2:pn1:pn:ps) = case turn pn pn1 pn2 of
-            RightTurn -> reduce (pn2:pn:ps)
-            _         -> (pn2:pn1:pn:ps)
+            RightTurn -> reduce $ pn2:pn:ps
+            _         -> pn2:pn1:pn:ps
           reduce ps = ps
           start = minimumBy p2min ps
-            where p2min (P2 x1 y1) (P2 x2 y2) | x1 < x2              = LT
-                                              | x1 == x2 && y1 < y2  = LT
-                                              | x1 == x2 && y1 == y2 = EQ
-                                              | otherwise            = GT
-          sortedPoints = sortBy (compPoints start) ps
-grahamScan ps = ps
+          sortedPoints = sortBy (compPoints start) (filter (/= start) ps)
             
-
-
-
 
 height :: Tree a -> Int
 height (Leaf a) = 0
