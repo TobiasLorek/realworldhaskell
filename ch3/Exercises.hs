@@ -6,7 +6,7 @@ data Tree a = Node (Tree a) (Tree a)
 
 data P2 = P2 Double Double deriving Show
 
-data Direction = LeftTurn | RightTurn | Straight deriving Show
+data Direction = LeftTurn | RightTurn | Straight | Back deriving Show
 
 dirToOrder :: Direction -> Ordering
 dirToOrder dir = case dir of
@@ -16,12 +16,16 @@ dirToOrder dir = case dir of
 
 turn :: P2 -> P2 -> P2 -> Direction
 turn p1 p2 p3
-    | z == 0 = Straight
-    | z <  0 = RightTurn
-    | z >  0 = LeftTurn
+    | z == 0 && p >= 0 = Straight
+    | z == 0 && p <= 0 = Back
+    | z <  0           = RightTurn
+    | z >  0           = LeftTurn
     where zdir (P2 x1 y1) (P2 x2 y2) (P2 x3 y3) 
             = (x2 - x1) * (y3 - y2) - (y2 - y1) * (x3 - x2)
           z = zdir p1 p2 p3
+          dot (P2 x1 y1) (P2 x2 y2) (P2 x3 y3) 
+            = (x2 - x1) * (x3 - x2) + (y2 - y1) * (y3 - y2)
+          p = dot p1 p2 p3
 
 
 turns :: [P2] -> [Direction]
@@ -31,24 +35,27 @@ turns ps = []
 compPoints :: P2 -> P2 -> P2 -> Ordering
 compPoints origin p1 p2 = dirToOrder $ (turn origin p1 p2)
 
+reduce (pn2:pn1:pn:ps) = case turn pn pn1 pn2 of
+    LeftTurn  -> (pn2:pn1:pn:ps)
+    _         -> reduce (pn2:pn:ps)
+reduce ps = ps
+
+p2min (P2 x1 y1) (P2 x2 y2) | x1 < x2              = LT
+                            | x1 == x2 && y1 < y2  = LT
+                            | x1 == x2 && y1 == y2 = EQ
+                            | otherwise            = GT
+
+points = [P2 100 100, P2 0 0, P2 0 100, P2 100 0, P2 23 54, P2 34 23]
+
 grahamScan :: [P2] -> [P2]
 grahamScan [] = []
 grahamScan [p] = [p]
 grahamScan [p1, p2] = [p1, p2]
 grahamScan [p1, p2, p3] = [p1, p2, p3]
 grahamScan (p:ps) = foldl (\x y -> reduce (y:x)) [start] (tail sortedPoints)
-    where reduce (pn2:pn1:pn:ps) = case turn pn pn1 pn2 of
-            RightTurn -> reduce (pn2:pn:ps)
-            _         -> (pn2:pn1:pn:ps)
-          reduce ps = ps
-          start = minimumBy p2min ps
-            where p2min (P2 x1 y1) (P2 x2 y2) | x1 < x2              = LT
-                                              | x1 == x2 && y1 < y2  = LT
-                                              | x1 == x2 && y1 == y2 = EQ
-                                              | otherwise            = GT
+    where start = minimumBy p2min ps
           sortedPoints = sortBy (compPoints start) ps
-grahamScan ps = ps
-            
+
 
 
 
