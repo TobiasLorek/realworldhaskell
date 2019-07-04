@@ -1,24 +1,21 @@
 import System.Environment (getArgs)
+import Data.Maybe
 
 interactWith function inputFile outputFile = do
     input <- readFile inputFile
-    putStr input
     writeFile outputFile (function input)
 
-accumulateTransposed :: [String] -> Int -> [String] -> [String]
-accumulateTransposed [] lineNo transposed = transposed
-accumulateTransposed (l:ls) lineNo trans = accumulateTransposed ls (lineNo + 1) (transposeLine l lineNo trans)
+maybeLine :: String -> [Maybe Char]
+maybeLine line = (map Just line) ++ (repeat Nothing)
 
-transposeLine :: String -> Int -> [String] -> [String]
-transposeLine [] i [] = []
-transposeLine (c:cs) i [] = [c] : transposeLine cs i []
-transposeLine [] i (l:ls) = (add " " i l " ") : transposeLine [] i ls
-transposeLine (c:cs) i (l:ls) = (add c i l " ") : transposeLine cs i ls
+transposeLists :: [[a]] -> [[a]]
+transposeLists = foldr (zipWith (:)) (repeat [])
 
-add :: a -> Int -> [a] -> a -> [a]
-add x 0 xs f = x:xs
-add x n [] f = f : add x (n - 1) [] f
-add x n (y:ys) f = y : add x (n - 1) ys f
+transposeToMaybe :: [String] -> [[Maybe Char]]
+transposeToMaybe lines = takeWhile (any isJust) $ transposeLists $ map maybeLine lines
+
+transposeText :: String -> String
+transposeText text = unlines $ map (map (fromMaybe ' ')) $ transposeToMaybe $ lines text
 
 main = mainWith myFunc
     where mainWith func = do
@@ -26,4 +23,4 @@ main = mainWith myFunc
             case args of 
               [input, output] -> interactWith func input output 
               _               -> putStrLn "need two filenames man"
-          myFunc = toFirstWords
+          myFunc = transposeText
